@@ -6,6 +6,7 @@ import time
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
+import ttkbootstrap as tb
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -13,7 +14,6 @@ HEADERS = {
 }
 
 def parse_price(price_str):
-    """Convert ₱26,999.00 → 26999.00"""
     if not price_str:
         return None
     s = re.sub(r"[^\d\.]", "", price_str)
@@ -23,7 +23,6 @@ def parse_price(price_str):
         return None
 
 def scrape_laptops_list(page_url, log_callback):
-    """Scrape product names, prices, and links from the given PCX collection page."""
     resp = requests.get(page_url, headers=HEADERS)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -57,7 +56,6 @@ def scrape_laptops_list(page_url, log_callback):
     return results
 
 def scrape_spec_page(laptop, log_callback):
-    """Scrape individual product details (e.g., specs)."""
     if not laptop.get("link"):
         return {}
     try:
@@ -88,7 +86,6 @@ def scrape_spec_page(laptop, log_callback):
     return specs
 
 def merge_data(listings, log_callback):
-    """Fetch each laptop's details and merge into one dataset."""
     full = []
     for idx, l in enumerate(listings):
         log_callback(f"Scraping {idx+1}/{len(listings)}: {l.get('name')}")
@@ -99,7 +96,6 @@ def merge_data(listings, log_callback):
     return full
 
 def write_csv(data, out_filename="laptops_scraped.csv"):
-    """Write all results to CSV."""
     keys = set()
     for d in data:
         keys.update(d.keys())
@@ -111,36 +107,50 @@ def write_csv(data, out_filename="laptops_scraped.csv"):
         for d in data:
             writer.writerow(d)
 
-# ---------------- GUI -----------------
-
 class ScraperGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("PCX Specification Scraper")
-        self.root.geometry("700x460")
+        self.root.geometry("780x480")
         self.root.resizable(False, False)
 
-        self.frame = ttk.Frame(root, padding=20)
-        self.frame.pack(fill="both", expand=True)
+        # Frame container (green rounded background)
+        self.container = tk.Frame(root, bg="#4b8253", bd=5, relief="flat")
+        self.container.place(relx=0.5, rely=0.5, anchor="center", width=740, height=440)
 
-        ttk.Label(self.frame, text="PCX Specification Scraper", font=("Segoe UI", 16, "bold")).pack(pady=10)
+        # Title
+        tk.Label(
+            self.container, 
+            text="Insert link", 
+            bg="#4b8253", 
+            fg="black", 
+            font=("Segoe UI", 12, "bold")
+        ).place(x=130, y=60)
 
-        # URL input box
-        ttk.Label(self.frame, text="Enter PCX Collection Link:").pack(anchor="w")
-        self.url_entry = ttk.Entry(self.frame, width=80)
+        # Input field
+        self.url_entry = ttk.Entry(self.container, width=50)
+        self.url_entry.place(x=250, y=60)
         self.url_entry.insert(0, "https://pcx.com.ph/collections/laptops")
-        self.url_entry.pack(pady=5)
 
         # Start button
-        self.start_button = ttk.Button(self.frame, text="Start Scraping", command=self.start_scraping)
-        self.start_button.pack(pady=10)
+        self.start_button = tb.Button(self.container, text="Start", bootstyle="success", command=self.start_scraping)
+        self.start_button.place(relx=0.5, y=110, anchor="center")
 
-        # Log box
-        self.log_box = tk.Text(self.frame, height=15, wrap="word", state="disabled", bg="#f7f7f7")
-        self.log_box.pack(fill="both", expand=True, pady=5)
+        # Log box (large gray area)
+        self.log_box = tk.Text(
+            self.container, 
+            height=12, 
+            width=80, 
+            wrap="word", 
+            bg="#d9d9d9", 
+            relief="flat", 
+            font=("Segoe UI", 10)
+        )
+        self.log_box.place(x=60, y=150)
 
-        self.progress = ttk.Progressbar(self.frame, mode="indeterminate")
-        self.progress.pack(fill="x", pady=5)
+        # Progress bar
+        self.progress = ttk.Progressbar(self.container, mode="indeterminate")
+        self.progress.place(x=60, y=370, width=620)
 
     def log(self, message):
         self.log_box.configure(state="normal")
@@ -180,6 +190,6 @@ class ScraperGUI:
             self.start_button.config(state="normal")
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = ScraperGUI(root)
-    root.mainloop()
+    app = tb.Window(themename="flatly")  # "flatly" gives a clean green-gray modern theme
+    ScraperGUI(app)
+    app.mainloop()
